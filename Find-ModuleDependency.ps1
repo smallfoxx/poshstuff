@@ -1,13 +1,13 @@
 <#PSScriptInfo
 
-.VERSION 
-    1.0.0.2210
+.VERSION
+    0.1.0.22101
 
-.GUID 
+.GUID
     334a9b68-0f6b-4836-9ad5-15163d4fb908
 
-.AUTHOR 
-    SmallFoxx
+.AUTHOR
+    SMFX
 
 .COMPANYNAME 
     SmallFoxx
@@ -16,7 +16,7 @@
     The MIT License (MIT)
 
 .TAGS 
-    Commands Dependencies Module "Dependent Modules"
+    Commands Dependencies Module Dependency
 
 .LICENSEURI 
     https://opensource.org/licenses/MIT
@@ -27,14 +27,12 @@
 .RELEASENOTES
 
 #>
+
 <#
 .SYNOPSIS
 Find all modules a particular set of script files use
-
 .DESCRIPTION
-By searching through content of file(s) in path, finds all the commands
-in those files, and the modules that house those commands.
-
+  By searching through content of files in path, finds all the commands in those files, and the modules that house those commands.
 .PARAMETER Path
 Location of directory or files to search
 .PARAMETER Filter
@@ -63,7 +61,7 @@ CommandType     Name        Version    Source
 Cmdlet          Write-Host  7.0.0.0    Microsoft.PowerShell.Utility
 
 After searching all .PS1 & .PSM1 files in the C:\Test directory, the
-.UsedCommands properties of each module will list the commands found
+UsedCommands properties of each module will list the commands found
 in the files
 
 .EXAMPLE
@@ -87,68 +85,76 @@ Get-Module
 Find-Command
 #> 
 [CmdletBinding()]
-    param (
-        [Parameter(ValueFromPipeline)]
-        [string]$Path=".",
-        [string]$Filter="*.ps?1",
         [string]$Exclude="*.psd1",
         [switch]$Recurse
-    )
-    
-    begin {
-        $excludeFunctions = @("NOT","Function","If","Param","ForEach","Begin","Process","End","Parameter","Mandatory","Switch")
-        $FoundCommands = [System.Collections.ArrayList]@()
-        $Modules = @{}
-        Function Find-CommandInFile {
-            param(
-                [parameter(ValueFromPipeline)]
                 [string]$Path,
                 [string]$CommandMatch = "(^|=|\||\()\s*(?<comm>(?<verb>\w+)(\-(?<noun>\w+))?)[^=]+(;|$)"
             )
             $Content = Get-Content -path $path
 
             $l=0
-            ForEach ($Line in $Content) {
-                $l++
-                ForEach ($matches in ([regex]::Matches($line,$CommandMatch))) {
-                    $commMatch = $matches.groups | Where-Object { $_.name -eq 'comm' }
+param (
+    [Parameter(ValueFromPipeline)]
+    [string]$Path=".",
+    [string]$Filter="*.ps?1",
+    [string]$Exclude="*.psd1",
+    [switch]$Recurse
+)
 
-                    ForEach ($Entry in $commMatch) {
+begin {
+    $excludeFunctions = @("NOT","Function","If","Param","ForEach","Begin","Process","End","Parameter","Mandatory","Switch")
+    $FoundCommands = [System.Collections.ArrayList]@()
+    $Modules = @{}
+    Function Find-CommandInFile {
+        param(
+            [parameter(ValueFromPipeline)]
+            [string]$Path,
+            [string]$CommandMatch = "(^|=|\||\()\s*(?<comm>(?<verb>\w+)(\-(?<noun>\w+))?)[^=]+(;|$)"
+        )
+        $Content = Get-Content -path $path
 
-                        [PSCustomObject]@{
-                            Command = $Entry.Value
-                            File = $Path
-                            Line = $l
-                            Character = $Entry.Index
-                        }
+        $l=0
+        ForEach ($Line in $Content) {
+            $l++
+            ForEach ($matches in ([regex]::Matches($line,$CommandMatch))) {
+                $commMatch = $matches.groups | Where-Object { $_.name -eq 'comm' }
+
+                ForEach ($Entry in $commMatch) {
+
+                    [PSCustomObject]@{
+                        Command = $Entry.Value
+                        File = $Path
+                        Line = $l
+                        Character = $Entry.Index
                     }
                 }
             }
         }
     }
-    
-    process {
-        $FilesInPath = Get-ChildItem -Path $Path -Filter $Filter -Exclude $Exclude -Recurse:$Recurse
-        ForEach ($File in $FilesInPath) {
-            $FoundEntries = Find-CommandInFile -Path $File
+}
 
-            $null = $FoundEntries | ForEach-Object { $FoundCommands.Add($_) }
-        }
+process {
+    $FilesInPath = Get-ChildItem -Path $Path -Filter $Filter -Exclude $Exclude -Recurse:$Recurse
+    ForEach ($File in $FilesInPath) {
+        $FoundEntries = Find-CommandInFile -Path $File
+
+        $null = $FoundEntries | ForEach-Object { $FoundCommands.Add($_) }
     }
-    
-    end {
-        $CommandGroups = $FoundCommands | Group-Object -Property Command
-        ForEach ($Group in $CommandGroups) {
-            If (-not [string]::IsNullOrEmpty($Group.Name) -and ($excludeFunctions -notcontains $Group.Name)) {
-                $Command = Get-Command $Group.Name -ErrorAction SilentlyContinue
-                If ($Command.Module) {
-                    $Command | Add-Member NoteProperty FoundUses ($Group.Group) -Force
-                    $Modules.($Command.Module) += @($Command)
-                }
+}
+
+end {
+    $CommandGroups = $FoundCommands | Group-Object -Property Command
+    ForEach ($Group in $CommandGroups) {
+        If (-not [string]::IsNullOrEmpty($Group.Name) -and ($excludeFunctions -notcontains $Group.Name)) {
+            $Command = Get-Command $Group.Name -ErrorAction SilentlyContinue
+            If ($Command.Module) {
+                $Command | Add-Member NoteProperty FoundUses ($Group.Group) -Force
+                $Modules.($Command.Module) += @($Command)
             }
         }
-        ForEach ($ModuleEntry in $Modules.Keys) {
-            $ModuleEntry | Add-member NoteProperty UsedCommands ($Modules.$ModuleEntry) -Force
-            $ModuleEntry
-        }
     }
+    ForEach ($ModuleEntry in $Modules.Keys) {
+        $ModuleEntry | Add-member NoteProperty UsedCommands ($Modules.$ModuleEntry) -Force
+        $ModuleEntry
+    }
+}
