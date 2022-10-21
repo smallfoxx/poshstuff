@@ -1,3 +1,33 @@
+<#PSScriptInfo
+
+.VERSION 
+    1.0.0.1
+
+.GUID 
+    cbd7128c-717b-4644-aab2-8617d00e5359
+
+.AUTHOR 
+    SmallFoxx
+
+.COMPANYNAME 
+    SmallFoxx
+
+.COPYRIGHT 
+    The MIT License (MIT)
+
+.TAGS 
+    Random Weighted Integer List
+
+.LICENSEURI 
+    https://opensource.org/licenses/MIT
+
+.PROJECTURI
+    https://github.com/smallfoxx/poshstuff/blob/main/Get-RandomWeighted.ps1
+
+.RELEASENOTES
+
+#>
+
 <#
 .SYNOPSIS
 Return a random result from weigthed values
@@ -56,7 +86,7 @@ respectively.
 
 .LINK
 Get-Random
-#>
+#>  
 [CmdletBinding()]
 param(
     [hashtable]$TableWeight,
